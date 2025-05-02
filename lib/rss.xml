@@ -1,0 +1,645 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Obsidian Vault]]></title><description><![CDATA[Obsidian digital garden]]></description><link>http://github.com/dylang/node-rss</link><image><url>lib/media/favicon.png</url><title>Obsidian Vault</title><link></link></image><generator>Webpage HTML Export plugin for Obsidian</generator><lastBuildDate>Fri, 02 May 2025 10:56:04 GMT</lastBuildDate><atom:link href="lib/rss.xml" rel="self" type="application/rss+xml"/><pubDate>Fri, 02 May 2025 10:56:00 GMT</pubDate><copyright><![CDATA[Samuel Decarnelle]]></copyright><ttl>60</ttl><dc:creator>Samuel Decarnelle</dc:creator><item><title><![CDATA[ARCH LINUX - Manual Install and Hardening]]></title><description><![CDATA[ 
+ <br><br><br>
+<br>
+Arch-Linux installation media (ISO file)
+
+<br>
+Machine with :
+
+<br>8GB RAM
+<br>110GB storage
+<br>Network connectivity
+
+
+
+<br><br><br>Boot Media
+Start your Arch-Linux iso mounted in EFI
+<br>Change your keyboard layout if needed:<br>loadkey fr
+<br><br>Critical with Encryption
+The encryption passphrase cannot be recovered if lost. Document it securely but separately from the system.
+<br><br>lsblk
+<br><br>cfdisk
+<br>/dev/vda1 - EFI partition (~300-512MB)
+/dev/vda2 - LUKS container (rest of the disk)
+<br>Tips
+cfdisk is a Simple tools to create partitions!
+<br><br><br>mkfs.fat -F32 /dev/vda1
+<br><br>cryptsetup luksFormat --type luks2 /dev/vda2
+<br><br>cryptsetup open /dev/vda2 cryptlvm
+<br><br>pvcreate /dev/mapper/cryptlvm
+<br><br>vgcreate vg0 /dev/mapper/cryptlvm
+<br><br>lvcreate -L 20G vg0 -n root     # Adjust size as needed
+lvcreate -L 15G vg0 -n var      # Adjust size as needed
+lvcreate -L 20G vg0 -n usr      # Adjust size as needed
+lvcreate -L 10G vg0 -n data     # Adjust size as needed
+lvcreate -L 30G vg0 -n home     # Adjust size as needed
+<br><br>lvcreate -L 8G vg0 -n swap      # Adjust size as needed
+<br><br>mkfs.ext4 /dev/vg0/root
+mkfs.ext4 /dev/vg0/var
+mkfs.ext4 /dev/vg0/usr
+mkfs.ext4 /dev/vg0/data
+mkfs.ext4 /dev/vg0/home
+<br><br>mkswap /dev/vg0/swap
+<br>Initial Setup, Encryption and Format Done!<br><br><br>mount /dev/vg0/root /mnt
+<br><br>mkdir -p /mnt/{boot,home,var,usr,data}
+<br><br>mount /dev/vda1 /mnt/boot
+<br><br>mount /dev/vg0/home /mnt/home
+mount /dev/vg0/var /mnt/var
+mount /dev/vg0/usr /mnt/usr
+mount /dev/vg0/data /mnt/data
+<br><br>swapon /dev/vg0/swap
+<br>Tips
+Since we already created the swap partition, the system will automatically swapon this partition, but doing it can be considered a good practice!
+<br>Mounted Partition Done!<br><br>You can put some options for your partitions, either by creating them when you are mounting them or after the reboot of your system. In this section we will see the first method of doing it.<br><br><br>mount /dev/vda1 /mnt/boot -o nosuid,nodev,noexec
+<br><br>mount /dev/vg0/home /mnt/home -o nosuid,nodev,noexec
+mount /dev/vg0/var /mnt/var -o nosuid,nodev,noexec
+mount /dev/vg0/usr /mnt/usr -o nodev
+mount /dev/vg0/data /mnt/data
+<br><br>pacstrap /mnt base base-devel nano vim networkmanager lvm2 cryptsetup grub efibootmgr linux linux-firmware sof-firmware
+<br><br>genfstab -U /mnt
+<br><br>genfstab -U /mnt &gt; /mnt/etc/fstab 
+<br>Now if you cat the /mnt/etc/sftab you sould see your fstab config<br>Tips
+The Options are useful to secure more our system:
+Nosuid Prevents Set-User-ID and Set-Group-ID Bits from Taking Effect
+
+<br>What it does: Disables the SUID (Set User ID) and SGID (Set Group ID) bits on executables located on that partition.
+<br>Normal behavior without this option: Binaries with SUID/SGID bits can execute with the privileges of the file owner/group rather than the user who runs them.
+<br>Security benefit: Prevents privilege escalation attacks where a malicious executable with SUID bit could gain root access.
+<br>Real-world example: If an attacker places a SUID root binary in /home, it would normally allow any user to run commands as root. With nosuid, this attack vector is eliminated.
+
+Noexec Prevents Direct Execution of Binaries
+
+<br>What it does: Blocks the execution of any binaries or scripts located on the partition.
+<br>Normal behavior without this option: Users can run executable files directly from the partition.
+<br>Security benefit: Prevents attackers from executing malicious code they've managed to place on the partition.
+<br>Real-world example: If attackers upload a malicious shell script to your web server's upload directory, noexec would prevent them from directly executing it
+
+Nodev Prevents Interpretation of Device Files
+
+<br>What it does: Prevents the interpretation of character or block special device files on the filesystem.
+<br>Normal behavior without this option: Device files could be used to access hardware directly.
+<br>Security benefit: Blocks unauthorized direct access to hardware devices.
+<br>Real-world example: Prevents an attacker from creating a device file that might provide unauthorized access to disk partitions or memory.
+
+<br>Partition Option Done!<br><br>arch-chroot /mnt
+<br><br>vim /etc/mkinitcpio.conf
+<br>-&gt;In mkinitcpio.conf, make sure your HOOKS line includes encrypt and lvm2 before filesystems and usr at the end:
+<br>HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck usr)
+<br><br>mkinitcpio -P
+<br>Tips
+What's going on when you do mkinitcpio -P?<br>
+The system will create all the necessary link to allow it to boot correctly.<br>
+Per example if you don't put usr to the end of the HOOKS section, the usr partition that is a different partition will not be linked at the boot. And then good luck, you are on your own ! ;)
+<br><br><br>ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime
+<br><br>hwclock --systohc
+<br>-&gt;If you want to check you can:
+<br>date
+<br>if the date is correct, all good my friend.<br>Tips
+Hardware clock: Physical clock on your motherboard powered by a battery, which keeps time even when your computer is powered off<br>
+But why is needed ?
+For example:<br>
+Modern file systems like ext4 rely on accurate timestamps. If the system time jumps backward during boot (because of an incorrect hardware clock), this can cause issues with:
+
+<br>File modification timestamps
+<br>Journal entries
+<br>Package management operations
+
+<br><br>vim /etc/locale.gen
+#Uncomment your locale (for us fr_FR.UTF-8 UTF-8)
+<br>Tips
+You can do: echo "fr_FR.UTF-8 UTF-8" &gt;&gt; /etc/locale.gen
+<br><br>locale-gen
+<br><br>echo "LANG=fr_FR.UTF-8" &gt;&gt; /etc/locale.conf
+<br>Tips
+You can check if it there by typing: cat /etc/locale.conf it sould return: LANG=fr_FR.UTF-8
+<br><br>echo web-server &gt;&gt; /etc/hostname #WOW AWESOME!
+<br><br>passwd
+#Then type it
+<br><br>useradd -m -G wheel -s /bin/bash localadm
+<br>Tips
+-m Create a home directory for the user.<br>
+-G Add to a group the user, here group wheel.<br>
+-s Set the user default login shell.
+<br><br>passwd localadm
+#Then type it
+<br><br>visudo
+#Add localadm ALL(ALL:ALL) ALL under root.
+#Uncomment the %wheel ALL=(ALL:ALL) ALL.
+<br>Basic Setup Done!<br><br>grub-install --efi-directory=/boot --bootloader-id=GRUB /dev/vda
+#Use the disk you have you boot onto, not the partition, just the disk
+<br>Info
+Now if you wan to check, you should: ls /boot<br>
+it should return EFI grub ...
+<br><br>For that we will need the UUID of the encrypted partition (vda2) and the non encrypted one (cryptlvm) to be inside the /etc/default/grub config file<br>blkid -o value -s UUID /dev/vda2 &gt;&gt; /etc/default/grub
+<br>Tips
+What's an UUID?<br>
+A UUID (Universally Unique Identifier), also known as a GUID (Globally Unique Identifier), is a 128-bit number used to uniquely identify information in computer systems. A standard UUID appears as a 36-character string (including hyphens "-") with this format:<br>
+550e8400-e29b-41d4-a716-446655440000
+<br><br>vim /etc/default/grub
+<br>Here you need to put your encrypted device and your non encrypted device inside the GRUB_CMDLINE_LINUX_DEFAULT line. So it should look like that:<br>GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet cryptdevice=UUID=YourEncryptedDeviceUUID root=/dev/vg0/root" 
+#Don't forget to delete the UUID at the botom of the file
+<br>Tips
+Why did we did that?<br>
+Simply to tell grub what's the encrypted device/partition and when the user enter the passphrase, where he need to boot!
+<br><br>Attention
+This can be considered, the most crucial moment of our configuration. I highly recommend, if you are onto a VM, to do a Snapshot. If your are not onto a VM, I have respect for you !  &lt;3
+<br>grub-mkconfig -o /boot/grub/grub.cfg
+<br><br>systemctl enable NetworkManager
+<br>Grub Done! GG!!<br><br>exit
+umount -a
+reboot
+<br><br>You can put some options for your partitions, either by creating them when you are mounting them or after the reboot of your system.<br><br>vim /etc/fstab
+<br>#Actually It should look like that:
+/dev/mapper/vg0-home /home ext4 defaults 0 2
+/dev/mapper/vg0-var  /var  ext4 defaults 0 2
+/dev/vda1            /boot vfat defaults 0 2
+/dev/mapper/vg0-usr  /usr  ext4 defaults 0 2
+<br>#Make it like that:
+/dev/mapper/vg0-home /home ext4 defaults,nosuid,nodev,noexec 0 2
+/dev/mapper/vg0-var  /var  ext4 defaults,nosuid,nodev,noexec 0 2
+/dev/vda1            /boot vfat defaults,nosuid,nodev,noexec 0 2
+/dev/mapper/vg0-usr  /usr  ext4 defaults,nodev 0 2
+
+<br>Tips
+The Options are useful to secure more our system:
+Nosuid Prevents Set-User-ID and Set-Group-ID Bits from Taking Effect
+
+<br>What it does: Disables the SUID (Set User ID) and SGID (Set Group ID) bits on executables located on that partition.
+<br>Normal behavior without this option: Binaries with SUID/SGID bits can execute with the privileges of the file owner/group rather than the user who runs them.
+<br>Security benefit: Prevents privilege escalation attacks where a malicious executable with SUID bit could gain root access.
+<br>Real-world example: If an attacker places a SUID root binary in /home, it would normally allow any user to run commands as root. With nosuid, this attack vector is eliminated.
+
+Noexec Prevents Direct Execution of Binaries
+
+<br>What it does: Blocks the execution of any binaries or scripts located on the partition.
+<br>Normal behavior without this option: Users can run executable files directly from the partition.
+<br>Security benefit: Prevents attackers from executing malicious code they've managed to place on the partition.
+<br>Real-world example: If attackers upload a malicious shell script to your web server's upload directory, noexec would prevent them from directly executing it
+
+Nodev Prevents Interpretation of Device Files
+
+<br>What it does: Prevents the interpretation of character or block special device files on the filesystem.
+<br>Normal behavior without this option: Device files could be used to access hardware directly.
+<br>Security benefit: Blocks unauthorized direct access to hardware devices.
+<br>Real-world example: Prevents an attacker from creating a device file that might provide unauthorized access to disk partitions or memory.
+
+<br><br>sudo reboot
+<br><br>Now we need to do some basic good practice to harden our system<br><br>sudo vim /etc/sudoers
+<br>#Add this line in the default sections of the file
+Defaults logfile=/var/log/sudo.log
+<br><br>Tips
+Why Disabling the Root User Is a Security Best Practice??
+
+<br>Prevents Brute Force Attacks on the Most Powerful Account.
+
+-The root account is a known, high-value target that exists on all Linux systems.<br>
+-Attackers often focus brute force attempts on the root account.<br>
+-Disabling direct root login eliminates this predictable attack vector.
+
+<br>Enforces the Principle of Least Privilege.
+
+-Standard users have limited access by default.<br>
+-Privileged operations require explicit elevation (via sudo/su).<br>
+-This prevents accidental execution of dangerous commands.<br>
+-Limits potential damage from compromised user sessions.
+
+<br>Improves Accountability and Auditing.
+
+-When using sudo, each privileged command is logged with the original user's identity.<br>
+-This creates a clear audit trail of who performed what administrative action.<br>
+-With direct root login, you lose the ability to track which actual person executed commands.
+
+<br>Reduces the Impact of Human Error.
+
+-The extra step of using sudo adds a moment of consideration before executing powerful commands.<br>
+-Helps prevent catastrophic mistakes (e.g., rm -rf / run accidentally).<br>
+-Many dangerous commands prompt for confirmation when run via sudo.
+
+<br>Limits Exposure from Compromise.
+
+-If an attacker compromises a standard user account, they still need to find a way to escalate privileges.<br>
+-This creates an additional security layer the attacker must overcome.<br>
+-Even when a user has sudo rights, the attacker needs to know/crack that user's password.
+
+<br>Facilitates Secure Remote Access Policies.
+
+-SSH can be configured to deny root login entirely.<br>
+-Forces attackers to compromise both a standard user account AND a method to escalate privileges.<br>
+-Allows security tools to monitor for suspicious privilege escalation attempts.
+<br><br>sudo vim /etc/passwd
+<br>Find the root line and change the shell to /usr/sbin/nologin :<br>root:x:0:0:root:/root:/usr/sbin/nologin
+<br><br>sudo vim /etc/shadow
+<br>Lock the root password by replacing * by ! :<br>root:!:19977:0:99999:7:::
+<br><br><br>sudo vim /etc/fstab
+<br>ADD theses two line at the end of the file :<br>#proc
+proc           /proc            proc            hidepid=2 0 0
+
+#tmpfs
+tmpfs          /tmp             tmpfs           nosuid,nodev,noexec 0 0
+<br>Base Hardening Done!<br><br><br>Instead of using passwords to log in to your server, SSH keys provide enhanced security. This system works through a matched pair of keys:<br>
+<br>Your server holds the public key
+<br>You keep the private key secure on your computer
+<br>When connecting, your server verifies your identity by checking if your private key matches the stored public key - no password needed. This prevents unauthorized access even if someone attempts password-guessing attacks.<br><br><br>First, update your system and install the necessary packages :<br>sudo pacman -S openssh libpam-google-authenticator qrencode
+<br><br>Start and enable the SSH service to ensure it runs at system boot :<br>sudo systemctl enable sshd
+sudo systemctl start sshd
+<br><br><br>Changing the default SSH port helps reduce automated attack attempts.<br>Edit the SSH configuration file :<br>sudo vim /etc/ssh/sshd_config
+<br>Find the Port line and modify it (uncomment if necessary) :<br>Port &lt;port&gt;
+<br>Security Note :
+Choose a port number between 1024 and 65535 that isn't used by other services. 
+<br><br>Preventing direct root login via SSH is a critical security measure.<br>In /etc/ssh/sshd_config, find and modify :<br>PermitRootLogin no
+<br><br>Restart the SSH service to apply all changes :<br>sudo systemctl restart sshd
+<br><br>On client machine :<br>ssh -p &lt;port&gt; &lt;username&gt;@&lt;server-ip&gt;
+<br>Basic SSH Config Done!<br><br><br>On your server machine (not the client) generate an RSA key pair :<br>ssh-keygen -t rsa -b 4096
+<br>Then, add the public key to authorized_keys :<br>cat ~/.ssh/id_rsa.pub &gt;&gt; ~/.ssh/authorized_keys
+<br><br>Copy your private key to the client :<br>Windows (with PowerShell):<br>scp -P &lt;port&gt; &lt;username&gt;@&lt;server-ip&gt;:~/.ssh/id_rsa ./.ssh
+<br><br>In /etc/ssh/sshd_config, find and uncheck :<br>AuthorizedKeysFile .ssh/authorized_keys
+<br><br>Restart the SSH service to apply all changes :<br>sudo systemctl restart sshd
+<br>Important :
+Do not close your current SSH session until you’ve verified the new configuration works.
+<br>RSA Config Done!<br><br><br><br><br><br>date
+<br><br>sudo timedatectl set-timezone &lt;continent&gt;/&lt;capital&gt;
+<br>
+<br>On the server, run the configuration tool :
+<br>	google-authenticator	
+<br>
+<br>A QR code will be displayed in the terminal. Scan it with an authenticator app like Google Authenticator, Authy, or Microsoft Authenticator.
+<br>Answer the questions when prompted :
+
+<br>"Do you want authentication tokens to be time-based?" → y (Uses time-based OTP tokens)
+<br>"Do you want to disallow multiple uses...?" → y (Prevents replay attacks)
+<br>"Do you want to increase the original window...?" → n (Maintains tight time synchronization requirements)
+<br>"Do you want to enable rate-limiting?" → y (Prevents brute force attacks)
+
+
+<br>Save the emergency scratch codes in a secure location.
+<br><br>
+<br>Edit the PAM SSH configuration file :
+<br>	sudo vim /etc/pam.d/sshd
+<br>
+<br>Add the following line at the beginning :
+<br>	auth required pam_google_authenticator.so
+<br><br>Edit /etc/ssh/sshd_config to enable PAM, challenge-response authentication and keyboard interactive authentication:<br>PasswordAuthentication no
+KbdInteractiveAuthentication yes
+UsePAM yes
+ChallengeResponseAuthentication yes
+AuthenticationMethods publickey,skeyboard-interactive
+<br>Comment all the code inside:<br>sudo nvim /etc/ssh/sshd_config.d/99-archlinux.conf
+#comment all the code
+<br><br>Restart the SSH service to apply all changes :<br>sudo systemctl restart ssh
+<br>Important :
+Do not close your current SSH session until you’ve verified the new configuration works.
+<br><br>LoginGraceTime determines the authentication window for users. <br>MaxAuthTries controls how many authentication attempts are permitted before blocking a connection.<br>MaxSessions defines how many simultaneous SSH connections a single user can maintain. <br>These are the recommended values for these three variables:<br>LoginGraceTime 20
+MaxAuthTries 3
+MaxSessions 5
+<br>These 3 lines are commented by default, make sure to uncomment them!<br><br>By default, SSH prevents users with empty passwords from accessing the server, but it's always good to double-check.<br>Look for the&nbsp;PermitEmptyPasswords&nbsp;variable and make sure it's set to&nbsp;no&nbsp;like this:<br>#PermitEmptyPasswords no
+<br>It's commented out by default. If it's already set to&nbsp;no, you can leave it as is.<br><br>Unattended SSH sessions present a significant security vulnerability. When a user maintains an open terminal without activity, this creates an idle connection that could potentially be exploited.<br>You can automatically disconnect inactive sessions by configuring two key parameters:
+ClientAliveInterval sets how frequently (in seconds) the server sends a verification signal to the client.<br>
+ClientAliveCountMax establishes how many consecutive verification attempts can fail before the server terminates the connection. 
+<br>ClientAliveInterval 60
+ClientAliveCountMax 3
+<br><br>By default, SSH can forward X11 sessions, which can be useful for certain graphical applications.<br>Unless necessary, disable X11 forwarding in SSH, as the X11 protocol isn't security-oriented.<br>Find the&nbsp;&nbsp;X11Forwarding&nbsp;variable and set it to&nbsp;no&nbsp;like this:<br>X11Forwarding no
+<br>Disabling non-essential features like X11 forwarding in SSH can greatly strengthen your server's security.<br><br>SSH agent forwarding lets you use your SSH keys to move from one server to another without keeping keys on the first server.<br>SSH TCP forwarding, also known as port forwarding, lets you redirect data between your local and remote machine.<br>Disable these two features if you don't need them to minimize the attack surface.<br>Find the&nbsp;&nbsp;AllowAgentForwarding&nbsp;and&nbsp;AllowTcpForwarding&nbsp;variables and set them to&nbsp;no&nbsp;like this:<br>AllowAgentForwarding no
+AllowTcpForwarding no
+<br><br>Accessing your server usually involves using a password with SSH. But a more secure method is&nbsp;SSH key authentication.<br>This uses two keys: a public key on your server and a private key you keep. You get access when the server verifies you have the private key.<br>This method is safer than just using a password, as it ensures only someone with the private key can enter the server.<br>Find the&nbsp;PasswordAuthentication variable and set its value to&nbsp;no&nbsp;like this:<br>PasswordAuthentication no
+<br>By doing this, you ensure that the server can only be accessed using SSH keys.<br>Always remember to keep your private key secure.<br><br>After you've made your changes, be sure to reload the SSH service to apply them.<br>Before that, you should verify the configuration for errors. You can do this using the following command:<br>sudo sshd -t
+<br>Use this command to restart SSH:<br>sudo systemctl restart sshd
+<br>Once the service is reloaded, your changes will be in effect.<br>You can also use the&nbsp;sudo sshd -T&nbsp;command to list all variables with their values, allowing you to check whether the changes have taken effect or not.<br>2FA Configuration Done!<br><br><br>Prevent source routing of incoming packets and log malformed IP's.<br><br>Create and edit /etc/sysctl.conf :<br>sudo vim /etc/sysctl.d/90-network-security.conf
+<br>Add the following lines :<br># Reverse Path Filtering (Prevent Spoofing Attacks)
+net.ipv4.conf.all.rp_filter = 1
+net.ipv4.conf.default.rp_filter = 1
+
+# Block SYN attacks
+net.ipv4.tcp_syncookies = 1
+net.ipv4.tcp_max_syn_backlog = 4096
+net.ipv4.tcp_synack_retries = 3
+
+# Ignore ICMP redirects
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv6.conf.all.accept_redirects = 0
+net.ipv4.conf.default.accept_redirects = 0
+net.ipv6.conf.default.accept_redirects = 0
+net.ipv4.conf.all.secure_redirects = 0
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.default.send_redirects = 0
+
+# Disable Source Packet Routing
+net.ipv4.conf.all.accept_source_route = 0
+net.ipv6.conf.all.accept_source_route = 0 
+net.ipv4.conf.default.accept_source_route = 0
+net.ipv6.conf.default.accept_source_route = 0
+
+# Disable Packet Forwarding (unless server is functioning as router or VPN)
+net.ipv4.ip_forward = 0
+net.ipv4.conf.all.forwarding = 0
+net.ipv6.conf.all.forwarding = 0
+net.ipv4.conf.default.forwarding = 0
+net.ipv6.conf.default.forwarding = 0
+
+# Protect TCP Connections (TIME-WAIT State)
+net.ipv4.tcp_rfc1337 = 1
+<br>Why Network Security Hardening (90-network-security.conf)?
+Without these protections, your system is vulnerable to:
+
+<br>IP Spoofing Attacks: Attackers can forge the source IP address of packets, making attacks harder to trace and potentially bypassing IP-based access controls.
+<br>Denial of Service Attacks: SYN flood attacks can overwhelm your system by exhausting connection resources with incomplete TCP handshakes.
+<br>Man-in-the-Middle Attacks: ICMP redirect messages can be used to manipulate your routing tables, redirecting your traffic through an attacker's system.
+<br>Network Reconnaissance: Default network behaviors can leak information about your system's network configuration and capabilities.
+<br>Traffic Hijacking: Source routing allows packets to specify their own route through the network, bypassing firewall rules and security controls.
+
+<br>Security Note :
+Real-world consequence: Without these protections, an attacker on the same network could redirect your traffic, intercept sensitive data, or use your system as part of a larger attack while hiding their tracks.
+<br><br>Create and edit /etc/sysctl.d/91-kernel-hardening.conf :<br>sudo vim /etc/sysctl.d/91-kernel-hardening.conf
+<br>Add the following lines:<br># Harden the BPF JIT Compiler
+net.core.bpf_jit_harden = 2
+kernel.unprivileged_bpf_disabled = 1 
+
+# Disable Magic Keys
+kernel.sysrq = 0
+
+# Restrict Access to Kernel Logs
+kernel.dmesg_restrict = 1
+
+# Restrict ptrace Access
+kernel.yama.ptrace_scope = 3
+
+# Restrict User Namespaces
+kernel.unprivileged_userns_clone = 0
+
+# Address Space Layout Randomization (ASLR)
+kernel.randomize_va_space = 2
+
+# Additional kernel hardening 
+kernel.kexec_load_disabled = 1
+kernel.perf_event_paranoid = 3
+<br>Why Kernel Hardening (91-kernel-hardening.conf)?
+Without these restrictions:
+
+<br>Privilege Escalation: Attackers who gain limited access to your system could exploit kernel features to elevate their privileges to root.
+<br>Memory Exploits: Predictable memory layouts make buffer overflow attacks more reliable and easier to execute.
+<br>Information Disclosure: Kernel logs can contain sensitive information like memory addresses that help attackers develop targeted exploits.
+<br>Process Hijacking: Debug facilities like ptrace can be abused to attach to and manipulate running processes, stealing credentials or injecting malicious code.
+<br>Kernel Module Exploitation: Malicious or vulnerable kernel modules can compromise the entire system since they run with kernel privileges.
+
+<br>Security Note :
+Real-world consequence: A seemingly minor application vulnerability could be leveraged into full system compromise because the kernel isn't properly hardened against post-exploitation activities.
+<br><br>Create and edit /etc/sysctl.d/91-kernel-hardening.conf :<br>sudo vim /etc/sysctl.d/92-fs-memory-protection.conf
+<br>Add the following lines:<br># Restrict Core Dumps
+kernel.core_pattern = |/bin/false
+fs.suid_dumpable = 0
+
+# File Creation Restrictions
+fs.protected_regular = 2
+fs.protected_fifos = 2
+fs.protected_hardlinks = 1
+fs.protected_symlinks = 1
+
+# Control Swapping
+vm.swappiness = 1
+<br>Why File System &amp; Memory Protection (92-fs-memory-protection.conf)?
+Without these safeguards:
+
+<br>Sensitive Data Exposure: Core dumps can write the complete memory contents of crashed processes to disk, potentially including passwords, encryption keys, and other secrets.
+<br>Race Condition Attacks: Without file protection mechanisms, attackers can exploit the timing between when a file is checked and when it's used (TOCTOU attacks).
+<br>Symlink Attacks: Attackers can create symbolic links to sensitive files in locations where your applications have write access but shouldn't have read access.
+<br>Memory Scraping: More aggressive swapping can write sensitive data from RAM to disk, where it might be recovered even after power loss.
+
+<br>Security Note :
+Real-world consequence: A compromised user account could be leveraged to read sensitive system files or extract credentials from memory that would otherwise be inaccessible.
+<br><br>Reload sysctl :<br>sudo sysctl -p
+<br>In cybersecurity, the goal isn't just to keep attackers out initially, but to make each step of an attack more difficult, more likely to be detected, and less likely to succeed. These sysctl configurations are a key part of that strategy.<br><br>To verify that all settings have been applied:<br># Check all configured parameters
+sudo sysctl --system
+
+# Or check specific categories
+sysctl -a | grep "net.ipv4.conf.all.rp_filter"
+#Should show "net.ipv4.conf.all.rp_filter = 1"
+sysctl -a | grep "net.ipv4.conf"
+sysctl -a | grep "kernel"
+sysctl -a | grep "fs.protected"
+<br>Kernel Hardening Done!<br><br><br>Setting up a firewall is essential for securing your server, and UFW makes this process straightforward and user-friendly.<br><br>On Debian-based distribution, like Ubuntu, UFW often comes pre-packaged, but you can check and install it using theses commands:<br># To check if UFW is installed
+sudo ufw status
+
+# If it's already installed disable it
+sudo ufw disable
+sudo ufw reset
+
+# To install it
+sudo pacman -Syu &amp;&amp; sudo pacman -S ufw
+<br>--You can re-enable it once you have added all the rules and finished configuring it.
+<br><br>By default, UFW takes a secure approach by blocking all incoming traffic while allowing outgoing traffic from our server. This means our server can communicate externally, but it remains inaccessible to others.<br>Since there is no issue with our server reaching the outside world, there is no need to make any changes to that aspect.<br>However, to enable incoming traffic, it’s essential to selectively open only the required ports and authorize traffic through them.<br>You can find the default policy defined in the&nbsp;/etc/default/ufw&nbsp;file:<br>DEFAULT_INPUT_POLICY="DROP"
+DEFAULT_OUTPUT_POLICY="ACCEPT"
+<br>As you can see, the default policy for incoming traffic is set to&nbsp;DROP, while the default policy for outgoing traffic is set to&nbsp;ACCEPT.<br>If UFW is enabled, you can also review the default policy using the following command:<br>sudo ufw status verbose
+<br>You can modify this default behavior of UFW either by directly editing the file or by using these two commands:<br>sudo ufw default &lt;policy&gt; incoming
+sudo ufw default &lt;policy&gt; outgoing
+<br>Replace&nbsp;&lt;policy&gt;&nbsp;with either&nbsp;deny,&nbsp;allow&nbsp;or&nbsp;reject
+deny&nbsp;corresponds to DROP<br>
+allow&nbsp;corresponds to ACCEPT<br>
+reject&nbsp;corresponds to REJECT.
+<br>What are these options? :
+Both DROP and REJECT policies prevent traffic from passing through the firewall, but they differ in their response messages.
+With DROP, the traffic is silently discarded without any acknowledgment sent to the source. It neither forwards the packet nor responds to it.
+On the other hand, REJECT sends an error message back to the source, signaling a connection failure.
+<br><br>You can find the UFW configuration file in /etc/default/ufw&nbsp;and examined the default policy of UFW, but there are other settings you might need to know about.<br>In this file, you will need to change only one option, the 'IPT_SYSCTL file path':<br># Since we harder directly the linux kernel, change the IPT_SYSCTL file path
+IPT_SYSCTL=/etc/sysctl.conf
+<br>This is for our configuration only
+The only change we make in this file is to the&nbsp;IPT_SYSCTL&nbsp;variable. There’s another file we’ll discuss next, which is&nbsp;/etc/ufw/sysctl.conf.  UFW uses this file to tweak certain kernel parameters.<br>
+However, the original file for changing kernel parameters is&nbsp;/etc/sysctl.conf.
+<br>Why this option? :
+While UFW uses its own version for this purpose, we prefer not to do that. When we&nbsp;harden the <a data-href="#Harden network with sysctl settings" href="about:blank#Harden_network_with_sysctl_settings" class="internal-link" target="_self" rel="noopener nofollow">Harden network with sysctl settings</a> we make our changes to kernel parameters directly in the&nbsp;/etc/sysctl.conf&nbsp;file.<br>
+That's why we need to change that line, if you did not harder the kernel, do not change it.<br>
+This way, I avoid dealing with two files and can maintain a clearer overview of the changes in a single file.
+<br>To incorporate the default changes that UFW makes, I can simply add these to the end of the&nbsp;/etc/sysctl.conf&nbsp;file:<br>net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.default.accept_redirects = 0
+net.ipv6.conf.all.accept_redirects = 0
+net.ipv6.conf.default.accept_redirects = 0
+net.ipv4.icmp_echo_ignore_broadcasts = 1
+net.ipv4.icmp_ignore_bogus_error_responses = 1
+net.ipv4.icmp_echo_ignore_all = 0
+net.ipv4.conf.all.log_martians = 0
+net.ipv4.conf.default.log_martians = 0
+<br>Now, simply reboot the server for the changes to take effect. There’s no need to enable UFW for the changes to apply, since we are using the original&nbsp;sysctl.conf&nbsp;file.<br>The last file we need to review is the&nbsp;/etc/ufw/ufw.conf&nbsp;file, which contains just two variables:<br>ENABLED=no
+LOGLEVEL=low
+<br>Why this option? :
+The first variable controls whether UFW is enabled or disabled. There's no need to change it manually, as enabling or disabling UFW from the command line will automatically update this value.<br>
+The second variable controls the log level of UFW. It can be set to&nbsp;off,&nbsp;low,&nbsp;medium,&nbsp;high, or&nbsp;full, depending on how much logging detail you want.
+<br>You can also change the logging level directly from the command line using the following command:<br>sudo ufw logging &lt;logging_level&gt;
+<br>-&gt;This will automatically update the value of the&nbsp;`LOGLEVEL`&nbsp;variable.
+<br><br>In the&nbsp;/etc/ufw/&nbsp;directory, you'll find files with the&nbsp;.rules&nbsp;extension(some example):<br>after6.rules  after.rules  before6.rules  before.rules  user6.rules  user.rules
+<br>These files control how UFW manages incoming, outgoing, and forwarded traffic. Files with the number&nbsp;6&nbsp;handle IPv6 traffic, while files without it handle IPv4 traffic.<br>Important
+It's important to note that you should not modify the&nbsp;user.rules&nbsp;or&nbsp;user6.rules&nbsp;files directly, as any changes could be overwritten by UFW. Rules added by the user from the command line are saved to these files, which is why they are called&nbsp;user.rules&nbsp;files.<br>
+You are free to add custom rules only to the&nbsp;before.rules&nbsp;or&nbsp;after.rules&nbsp;files.
+<br>Important
+The order in which UFW processes firewall rules is as follows:&nbsp;before.rules&nbsp;first,&nbsp;user.rules&nbsp;next, and&nbsp;after.rules&nbsp;last.<br>
+Understanding the order in which UFW processes these files and their respective roles is essential for effectively managing your firewall.
+<br><br>In the following, we'll cover the basic firewall rules that can be added from the command line.<br>UFW offers a set of commands for managing firewall rules directly, allowing you to quickly specify which services or ports are allowed or denied.<br>While these rules are designed for basic network access control and aren't intended for advanced use cases, they are perfect for setting up a firewall swiftly and efficiently.<br>Tips
+  To review the rules you've added when the firewall is disabled, use the command&nbsp;sudo ufw show added, as&nbsp;sudo ufw status&nbsp;won’t display the rules in that case.
+<br>Remember
+Every rule you add from the command line is saved to the&nbsp;user.rules&nbsp;file, so feel free to check it as you add rules to understand how UFW translates the commands into the file.
+<br><br>The core functionality of UFW is to allow or deny network traffic.<br>To allow or deny traffic for specific ports, you use the&nbsp;allow&nbsp;or&nbsp;deny&nbsp;rules, respectively.<br>To allow incoming traffic on port 22 (SSH):<br>sudo ufw allow 22
+<br>You can also specify a protocol (TCP or UDP):<br>sudo ufw allow 22/tcp
+<br>To deny traffic on port 80(HTPP):<br>sudo ufw deny 80
+<br>If a range of ports is required, such as 5000-6000, use the following:<br>sudo ufw allow 5000:6000/tcp
+<br>Similarly, to deny traffic for the same range:<br>sudo ufw deny 5000:6000/tcp
+<br>You can also allow or deny traffic based on a service's name instead of specifying a port number. For example, to allow SSH traffic by using the service name, you can use:<br>sudo ufw allow ssh
+<br>UFW will then automatically determine the correct port (port 22 for SSH) and the associated protocol (TCP) to apply the rule. This approach simplifies rule management, especially when dealing with well-known services.<br>Caution
+In our case, we have changed the port of our ssh, so this command do not work.
+<br><br>Applications (software or services installed) can register their profiles with UFW upon installation, enabling UFW to manage them by name.<br>To view the available profiles, you can use the following command:<br>sudo ufw app list
+<br>For instance, to allow traffic on port 443 (HTTPS), you can use the following commands:<br>sudo ufw allow "NGINX HTTPS"
+sudo ufw allow "Apache Secure"
+<br>Tips
+If you’re curious about the origins of these profiles, check the&nbsp;/etc/ufw/applications.d/&nbsp;directory.
+<br><br>The&nbsp;limit&nbsp;rule&nbsp;in UFW helps protect against brute-force attacks by restricting the number of connection attempts an IP can make in a short time.<br>For example, when securing SSH, this rule lets legitimate users connect but temporarily blocks any IP that makes too many failed attempts.<br>By default, the rule allows only&nbsp;6 connections&nbsp;from the same IP within&nbsp;30 seconds. If the limit is exceeded, the IP is blocked temporarily, which reduces the risk of brute-force attacks.<br>To apply this rule for SSH traffic:<br>sudo ufw limit 22
+<br>-&gt;This command enables SSH access while protecting the server from excessive connection attempts.
+<br><br>UFW lets you control access based on IP addresses or subnets, which is useful for limiting access to specific clients or denying access from specific sources.<br>To allow all traffic from a specific IP to any port:<br>sudo ufw allow from 192.168.1.100
+<br>To allow SSH traffic only from a specific IP:<br>sudo ufw allow from 192.168.1.100 to any port 22
+<br>To allow traffic from a subnet:<br>sudo ufw allow from 192.168.1.0/24
+<br>To deny traffic from a specific IP address:<br>sudo ufw deny from 203.0.113.50
+<br>In some cases, you might want to specify not just the IP or subnet but also the protocol (TCP or UDP).<br>For example, to allow only TCP traffic from an IP address to port 80, you can specify the protocol as follows:<br>sudo ufw allow from 192.168.1.100 to any port 80 proto tcp
+<br>By specifying protocols in your access control rules, you gain more control over the traffic flow, ensuring that only the desired traffic (TCP or UDP) is allowed from specific sources or networks.<br><br>Before activating our firewall, it’s crucial to review the rules we’ve added so far to prevent any unexpected behavior.<br>Tips
+As I mentioned earlier, if the firewall is disabled, we can't use the&nbsp;sudo ufw status&nbsp;command to view our rules.<br>
+Instead, we use the&nbsp;sudo ufw show added&nbsp;command. This command will list all the rules we have added.<br>
+Always add the rules, review them, and then proceed to enable the firewall.
+<br>To enable UFW and apply the rules you’ve configured, use the following command:<br>sudo ufw enable
+<br>Now, you can check the status of UFW and your current ruleset using the&nbsp;sudo ufw status&nbsp;command.<br>For a more detailed view:<br>sudo ufw status verbose
+<br>Tips
+If you experience any issues, disable UFW using&nbsp;sudo ufw disable&nbsp;and review your rules again.<br>
+If you need to reset UFW to its default state (removing all rules), you can use the&nbsp;sudo ufw reset&nbsp;command.
+<br><br>If, for some reason, you want to delete a rule you have added, you can use the&nbsp;sudo ufw deletecommand followed by the rule itself like this:<br>sudo ufw delete deny from 111.111.111.111 to any port 80 proto tcp
+sudo ufw delete allow 80
+<br>There is another easier way to delete rules, but it requires the firewall to be enabled. This method involves using the rule number.<br>Once the firewall is enabled, you can use the&nbsp;sudo ufw status numbered&nbsp;command to obtain a list of your rules and their corresponding numbers, like this:<br>To                         Action      From
+--                         ------      ----
+[ 1] 22/tcp                ALLOW IN    Anywhere                  
+[ 2] 22/tcp (v6)           ALLOW IN    Anywhere (v6)  
+<br>Now, to delete a rule, you can simply use the rule number:<br>sudo ufw delete 1 
+<br>-&gt;This is a much simpler method.
+<br><br>The first step before enabling a firewall is to allow SSH traffic to ensure access to the server. If you enable the firewall before adding this rule, you risk losing access to your server.<br>We showed you how to use the&nbsp;allow&nbsp;or&nbsp;limit&nbsp;rules. Using these rules will permit any IP address to access port 22, which means our SSH port is open to everyone. This is something we avoid on a production server.<br>If we have a static IP from which we can access the server, we restrict the SSH port to that IP. This provides an extra layer of security and reduces the risk of unauthorized access.<br>Even if you’ve generated an SSH key pair, implemented key authentication, and created a non-root user, hackers could still attempt to breach your server.<br>Tips
+Only restrict the SSH port to your IP if it’s static – such as when using a VPN service or if your ISP has assigned you a static IP.
+<br>If you have a static IP, use the following command:<br>sudo ufw allow from &lt;YOUR_IP&gt; proto tcp to any port 22
+<br>Now, the IP specified in the command is the only one that can access the server.<br>Caution
+When you restrict SSH access to a single IP,&nbsp;Fail2Ban&nbsp;becomes irrelevant since there are no IPs to block. However, I still recommend keeping Fail2ban installed and enabled.
+<br><br>Up until now, we’ve focused on basic user-defined rules that you can easily manage from the command line.<br>Now, we’ll introduce the idea of advanced rules, which allow you to control traffic at a deeper level by configuring UFW's&nbsp;/etc/ufw/before.rules&nbsp;files.<br>These advanced rules let you filter traffic&nbsp;before it reaches your server’s services&nbsp;and&nbsp;before the firewall applies its standard rules.<br>Advanced rules are incredibly powerful and can be tailored to specific use cases, offering finer control over your network's security and performance.<br>And as we mentioned earlier, all of UFW's rule files primarily use the iptables syntax.<br><br>The&nbsp;before.rules&nbsp;file begins with a declaration of the&nbsp;*filter&nbsp;table and defines several custom chains:<br>*filter
+:ufw-before-input - [0:0]
+:ufw-before-output - [0:0]
+:ufw-before-forward - [0:0]
+:ufw-not-local - [0:0]
+<br>Why theses option? :
+
+<br>:ufw-before-input: Processes incoming packets.
+<br>:ufw-before-forward: Handles packets forwarded through the server.
+<br>:ufw-not-local: Deals with packets that are not addressed to or from the local system.
+
+<br>It includes several default rules to handle fundamental network operations and improve security. These rules cover a variety of scenarios, such as allowing all traffic on loopback interfaces or dropping invalid packets. They are applied by default once you enable the firewall.<br>
+The file ends with the&nbsp;COMMIT&nbsp;line, signaling the completion of the rules.<br>The structure in&nbsp;before6.rules&nbsp;for IPv6 is nearly identical to that of&nbsp;before.rules&nbsp;for IPv4.<br>The main difference is that the chains in&nbsp;before6.rules&nbsp;all have the number&nbsp;6&nbsp;added to their names, like this:<br>*filter
+:ufw6-before-input - [0:0]
+:ufw6-before-output - [0:0]
+:ufw6-before-forward - [0:0]
+<br>However, unlike&nbsp;before.rules,&nbsp;before6.rules&nbsp;does not include a&nbsp;ufw6-not-local&nbsp;chain.<br>It includes some of the default rules that&nbsp;before.rules&nbsp;has, but it also contains additional rules that are applied specifically to IPv6 traffic.<br>The file also ends with the&nbsp;COMMIT&nbsp;line, signaling the completion of the rules.<br><br>As we mentioned earlier, these files take priority, meaning they are executed first.<br>This allows us to define rules that will take effect before traffic reaches anything running on the server and before it travels further through the firewall.<br>You can, for example, implement a solution to block SYN flood attacks&nbsp;by rate-limiting the number of SYN packets allowed through ports 80 and 443, and block IPs exceeding these limits. This is something that cannot be done using basic user-defined rules from the command line.<br>While you can use the&nbsp;limit&nbsp;rule for ports 80 and 443, it’s not ideal for a web server since the limits may not be well-suited to handle the typical traffic patterns of a web server.<br>Using more advanced rules in&nbsp;before.rules&nbsp;allows you to fine-tune the firewall for specific use cases like this.<br>What's SYN flood attacks?:
+SYN flood attacks&nbsp;are a common and dangerous type of attack that can overwhelm a server by sending an excessive number of connection requests, ultimately disrupting legitimate traffic and potentially causing the server to go down.
+<br><br>If you examine the contents of the&nbsp;before.rules&nbsp;file, you will notice these two rules:<br>-A ufw-before-input -m conntrack --ctstate INVALID -j ufw-logging-deny
+-A ufw-before-input -m conntrack --ctstate INVALID -j DROP
+<br>Why this option? :
+These two rules are designed to log and block any invalid packets, and they are added by default by UFW to the&nbsp;ufw-before-input&nbsp;chain, which filters incoming traffic before it reaches the server, ensuring that only legitimate connections are allowed.
+<br>What is Invalid Packet?:
+Hackers use tools to create TCP packets with unusual, weird flag combinations, known as&nbsp;Invalid&nbsp;Packets, capable of causing significant harm.<br>
+UFW&nbsp;blocks these invalid packets by default, but there are still instances where it may overlook and fail to block.
+<br>UFW uses the&nbsp;conntrack&nbsp;module (short for connection tracking) to monitor connections and identify those with&nbsp;INVALID&nbsp;connection states. While these rules are effective, we can make them even better.<br>To further enhance the security of our server, we could add two additional rules to log and block any new connections that don’t have only the SYN flag set.<br>Add the following two rules below the ones added by default by UFW:<br>-A ufw-before-input -p tcp -m tcp ! --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j ufw-logging-deny
+-A ufw-before-input -p tcp -m tcp ! --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j DROP
+<br>Don't forget to add them to the&nbsp;before6.rules&nbsp;file as well:<br>-A ufw6-before-input -p tcp -m tcp ! --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j ufw6-logging-deny
+-A ufw6-before-input -p tcp -m tcp ! --tcp-flags FIN,SYN,RST,ACK SYN -m conntrack --ctstate NEW -j DROP
+<br>Why this option? :
+-The first rule drops any packet that’s considered&nbsp;INVALID&nbsp;by the&nbsp;conntrack&nbsp;module.<br>
+-The second rule blocks TCP packets that are flagged as&nbsp;NEW&nbsp;(indicating new connection attempts) but don’t have the SYN flag set&nbsp;alone.
+<br>Now, reload UFW if it is already enabled:<br>sudo ufw reload
+<br>These additional rules further enhance the firewall’s ability to filter out potentially malicious packets and protect your server from unwanted connection attempts.<br>Firewall Using UFW Done!<br><br>Warning
+
+But you can do it to the web server too.
+<br><br>Fail2ban is available in Arch-Linux repositories.<br>To install it, use this command:<br>sudo pacman -S fail2ban
+<br><br>Fail2ban's configuration files are located in the&nbsp;/etc/fail2ban/&nbsp;directory.<br>If you list the contents of this directory, you will find two important configuration files:&nbsp;<br>
+<br>The&nbsp;fail2ban.conf&nbsp;file contains Fail2Ban's global settings, which I don't recommend modifying.
+<br>The&nbsp;jail.conf&nbsp;file contains jails, filters with actions.
+<br>Fail2Ban recommends creating two local copies of these configuration files for us to modify.<br>Use the following commands to create a local copy of these two files:<br>sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+sudo cp /etc/fail2ban/fail2ban.conf /etc/fail2ban/fail2ban.local
+<br>Now you can safely modify Fail2Ban's configuration.<br><br>Open the&nbsp;jail.local&nbsp;file with your preferred editor and examine its settings.<br>Under the&nbsp;[DEFAULT]&nbsp;section, there are some variables that you may want to modify.<br>bantime
+<br>The&nbsp;bantime&nbsp;variable sets the duration for which an IP will be blocked from accessing the server after failing to authenticate correctly.<br>By default, this is set to 10 minutes.<br>findtime
+maxretry
+<br>The&nbsp;maxretry&nbsp;variable defines the number of authentication attempts an IP is allowed to make within a time period defined by&nbsp;findtime&nbsp;before being blocked.<br>With the default settings, Fail2Ban will block an IP that unsuccessfully attempts to access the server more than 5 times within a 10-minute interval.<br>#ignoreip = 127.0.0.1/8 ::1
+<br>The&nbsp;ignoreip&nbsp;variable contains a list of IP addresses, CIDR masks, or DNS hosts that Fail2ban won't block.<br>By default, this variable is commented out.<br><br>If you want to receive email alerts whenever Fail2ban blocks an IP, you should adjust these two variables inside the&nbsp;jail.local&nbsp;file:<br>destemail
+sender
+<br>The&nbsp;destemail&nbsp;variable defines the email address to which the alerts should be sent.<br>The&nbsp;sender&nbsp;variable defines the email address from which the alerts will be sent.<br>The sender variable should look like this:<br>sender = root@example.com
+<br>Lastly, there is the&nbsp;mta&nbsp;variable, which specifies the mail agent that will be used to send the emails.<br>By default, Fail2ban uses Sendmail as its mail agent. You can change this with the mta variable.<br><br>If you scroll down a bit inside the&nbsp;jail.local&nbsp;file, you'll see the&nbsp;action&nbsp;variable:<br>action = %(action_)s
+<br>This variable dictates the action Fail2ban should take when blocking an IP address.<br>The default action is to add a firewall rule that rejects traffic from the IP address, removing it after the specified&nbsp;bantime elapses.<br>Above the action variable, you'll find various actions you can switch between :<br>
+<br>action_mw&nbsp;sends an email when taking action
+<br>action_mwl&nbsp;sends an email and includes logging
+<br>action_cf_mwl&nbsp;does all of the above, plus sends an update to the Cloudflare API associated with your account to ban the attacker there as well
+<br>Pick the one that suits you the most.<br><br>Now, it is time to examine the service-specific sections, also known as individual jails, such as the&nbsp;[sshd]&nbsp;jail, which protects our server from unauthorized access attempts.<br>Each of these jails needs to be individually enabled by adding an&nbsp;enabled = true&nbsp;line under the header, along with their other settings.<br>By default, only the&nbsp;[sshd]&nbsp;jail is enabled, and all others are disabled.<br>Scroll down the&nbsp;jail.conf&nbsp;file until you find the&nbsp;[sshd]&nbsp;jail, which should look similar to this:<br>port    = ssh
+logpath = %(sshd_log)s
+backend = %(sshd_backend)s
+<br>If you've changed the SSH port, ensure to update the value of the&nbsp;port&nbsp;variable accordingly.<br>You can include variables defined in the&nbsp;[DEFAULT]&nbsp;section, such as the&nbsp;bantime,&nbsp;maxretry, and&nbsp;findtime&nbsp;variables, which will only apply to this jail.<br>If you scroll down further, you'll find other jails that are disabled, such as the&nbsp;[nginx-http-auth]&nbsp;or&nbsp;[apache-auth] jails.<br><br>Since the&nbsp;[sshd]&nbsp;jail, which protects SSH, is enabled, we can proceed to start and enable the fail2ban&nbsp;service if it is disabled, depending on the version of Ubuntu you are using.<br>Use the following commands to start and enable Fail2ban:<br>sudo systemctl start fail2ban
+sudo systemctl enable fail2ban
+<br>You can use the&nbsp;fail2ban-client&nbsp;command to check the active jails:<br>sudo fail2ban-client status
+<br>Output:<br>Status
+|- Number of jail:	1
+`- Jail list:	sshd
+<br>To view the status and information regarding a specific jail like the&nbsp;sshd&nbsp;jail, you can use the following command:<br>sudo fail2ban-client status sshd
+<br>Output:<br>Status for the jail: sshd
+|- Filter
+|  |- Currently failed:	5
+|  |- Total failed:	21
+|  `- File list:	/var/log/auth.log
+`- Actions
+   |- Currently banned:	1
+   |- Total banned:	2
+   `- Banned IP list:	218.92.0.29
+<br>If you have disabled password authentication for SSH, you may notice zero failed attempts.<br>Caution
+For Ubuntu-Server 22.4 you need to download r6log to make Fail2Ban work!<br>
+Then you need to add "authpriv.*           /var/log/auth.log" in the /etc/rsyslog.conf
+<br>Fail2Ban Configuration Done!<br><br>Warning
+
+<br><br>Warning
+You need to be onto the archlinux iso to do it, not on your arch-chroot
+<br><br>lvcreate -L 5G vg0 -n httpdata  # Create a new logical volume
+<br><br>cryptsetup luksFormat /dev/vg0/httpdata  # Encrypt it separately
+<br><br>cryptsetup open /dev/vg2/httpdata crypthttp
+<br><br>mkfs.ext4 /dev/mapper/crypthttp
+mkdir -p /mnt/data/http
+<br><br>mount /dev/mapper/crypthttp /mnt/data/http
+<br><br>umount -a
+reboot
+<br><br>Then we need to do a script to decrypt the http partition, and a script to lunch the decrypt partition when the user localadm login.<br><br>nvim /usr/local/bin/mount-httpdata.sh
+<br>ADD THIS CONTENT:<br>#!/bin/bash
+
+# Check if already mounted
+if mountpoint -q /data/http; then
+    echo "HTTP data partition is already mounted."
+    exit 0
+fi
+
+# Try to unlock and mount
+echo "Unlocking HTTP data partition..."
+if cryptsetup open /dev/vg0/httpdata crypthttp; then
+    echo "Mounting HTTP data partition..."
+    mount /dev/mapper/crypthttp /data/http
+    echo "HTTP data partition mounted successfully."
+    
+    # Set proper ownership and permissions
+    chown localadm:http /data/http #Here we use http groupe for nginx on arch linux
+    chmod 750 /data/http
+    
+    # Restart web server if needed
+    systemctl restart nginx
+else
+    echo "Failed to unlock HTTP data partition."
+    exit 1
+fi
+<br><br>chmod +x /usr/local/bin/mount-httpdata.sh
+<br>Now that the script to decrypt and mount the http partition is done, we need to make a script to exec it on localadm login.<br>nvim /home/localadm/.bash_profile
+<br>ADD THIS CONTENT TO THE END OF THE FILE:<br># Check if HTTP partition is mounted
+if ! mountpoint -q /data/http; then
+    echo "HTTP data partition is not mounted."
+    read -p "Would you like to mount it now? (y/n): " response
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        sudo /usr/local/bin/mount-httpdata.sh
+    fi
+fi
+<br>GG
+You can reboot your system and have fun ! GG, now you have an hardened arch linux, with manual install and an http partition that is automatically mounted when the local administrator logged in. This is an advanced configuration, if your setup work, you can be proud of you !
+<br>]]></description><link>arch-linux-manual-install-and-hardening.html</link><guid isPermaLink="false">ARCH LINUX - Manual Install and Hardening.md</guid><dc:creator><![CDATA[Samuel Decarnelle]]></dc:creator><pubDate>Fri, 02 May 2025 09:24:17 GMT</pubDate></item></channel></rss>
