@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Obsidian Vault]]></title><description><![CDATA[Obsidian digital garden]]></description><link>http://github.com/dylang/node-rss</link><image><url>lib/media/favicon.png</url><title>Obsidian Vault</title><link></link></image><generator>Webpage HTML Export plugin for Obsidian</generator><lastBuildDate>Fri, 02 May 2025 10:56:04 GMT</lastBuildDate><atom:link href="lib/rss.xml" rel="self" type="application/rss+xml"/><pubDate>Fri, 02 May 2025 10:56:00 GMT</pubDate><copyright><![CDATA[Samuel Decarnelle]]></copyright><ttl>60</ttl><dc:creator>Samuel Decarnelle</dc:creator><item><title><![CDATA[ARCH LINUX - Manual Install and Hardening]]></title><description><![CDATA[ 
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Obsidian Vault]]></title><description><![CDATA[Obsidian digital garden]]></description><link>http://github.com/dylang/node-rss</link><image><url>lib/media/favicon.png</url><title>Obsidian Vault</title><link></link></image><generator>Webpage HTML Export plugin for Obsidian</generator><lastBuildDate>Sat, 03 May 2025 00:31:11 GMT</lastBuildDate><atom:link href="lib/rss.xml" rel="self" type="application/rss+xml"/><pubDate>Sat, 03 May 2025 00:31:07 GMT</pubDate><copyright><![CDATA[Samuel Decarnelle]]></copyright><ttl>60</ttl><dc:creator>Samuel Decarnelle</dc:creator><item><title><![CDATA[ARCH LINUX - Manual Install and Hardening]]></title><description><![CDATA[ 
  <br><br><br>
 <br>
 Arch-Linux installation media (ISO file)
@@ -22,27 +22,54 @@ The encryption passphrase cannot be recovered if lost. Document it securely but 
 <br>/dev/vda1 - EFI partition (~300-512MB)
 /dev/vda2 - LUKS container (rest of the disk)
 <br>Tips
-cfdisk is a Simple tools to create partitions!
+cfdisk is a curses-based (terminal UI) disk partitioning tool for Linux. It provides an interactive interface to create, delete, resize, and manage partitions on storage devices. It's often preferred over fdisk because it offers a more user-friendly interface while still being terminal-based.
+<br>GPT for EFI: Why It's Required?
+GPT (GUID Partition Table) is necessary for EFI/UEFI systems because:
+
+<br>The UEFI specification officially requires GPT.
+<br>GPT provides the unique partition type identifiers (GUIDs) that UEFI firmware uses to locate the EFI System Partition.
+<br>MBR lacks the technical capability to properly identify EFI partitions to the firmware.
+<br>While some UEFI implementations might boot from MBR in compatibility mode, this is not guaranteed across all hardware and may cause boot issues.
+
+In short: EFI needs GPT to reliably identify and boot from the correct partition.
 <br><br><br>mkfs.fat -F32 /dev/vda1
+<br>Info
+mkfs stands for "make filesystem." It's a crucial command used during the Arch Linux installation process that formats a partition with a specific filesystem type, preparing it to store files and directories.
 <br><br>cryptsetup luksFormat --type luks2 /dev/vda2
+<br>Info
+cryptsetup is a utility used to set up disk encryption on Linux systems, particularly for creating, managing, and accessing encrypted disk partitions. luksFormat is a specific command within cryptsetup that initializes a LUKS (Linux Unified Key Setup) encrypted partition, essentially formatting the device with encryption capabilities. This allows you to create secure, password-protected partitions during Arch Linux installation to protect your data from unauthorized access if your physical drive is stolen or compromised.
 <br><br>cryptsetup open /dev/vda2 cryptlvm
+<br>Info
+cryptsetup open /dev/vda2 cryptlvm means you're unlocking an encrypted LUKS partition (/dev/vda2) and mapping it to a device named "cryptlvm" under /dev/mapper. This command decrypts the partition using your passphrase and makes the unencrypted contents accessible through the device mapper path (/dev/mapper/cryptlvm), allowing you to use this decrypted volume for operations like creating logical volumes or mounting filesystems. After this command, the encrypted contents become accessible to the system while remaining encrypted on the physical disk.
 <br><br>pvcreate /dev/mapper/cryptlvm
+<br>Info
+pvcreate /dev/mapper/cryptlvm means you're initializing a physical volume (PV) for use with Logical Volume Management (LVM) on the decrypted device mapper path (/dev/mapper/cryptlvm). This command prepares the previously unlocked LUKS partition to be used within LVM's storage management system. It writes metadata to the device, marking it as an LVM physical volume, which is the foundation layer of the LVM structure. Once initialized, this physical volume can be added to volume groups and subsequently divided into logical volumes for flexible storage management.
 <br><br>vgcreate vg0 /dev/mapper/cryptlvm
+<br>Info
+vgcreate vg0 /dev/mapper/cryptlvm means you're creating a new volume group named "vg0" using the previously initialized physical volume at /dev/mapper/cryptlvm. This command sets up the middle layer of the LVM hierarchy. A volume group acts as a pool of storage that combines one or more physical volumes (in this case, just your encrypted partition) into a single administrative unit. Once created, the volume group "vg0" becomes the container from which you can carve out logical volumes of various sizes for different purposes like root filesystem, home directory, or swap space, regardless of the physical disk boundaries.
 <br><br>lvcreate -L 20G vg0 -n root     # Adjust size as needed
 lvcreate -L 15G vg0 -n var      # Adjust size as needed
 lvcreate -L 20G vg0 -n usr      # Adjust size as needed
 lvcreate -L 10G vg0 -n data     # Adjust size as needed
 lvcreate -L 30G vg0 -n home     # Adjust size as needed
 <br><br>lvcreate -L 8G vg0 -n swap      # Adjust size as needed
+<br>Info
+Each command allocates a specific amount of space from the volume group and creates a logical device that can be formatted with a filesystem. These logical volumes will be accessible at paths like /dev/vg0/root, /dev/vg0/home, etc.
 <br><br>mkfs.ext4 /dev/vg0/root
 mkfs.ext4 /dev/vg0/var
 mkfs.ext4 /dev/vg0/usr
 mkfs.ext4 /dev/vg0/data
 mkfs.ext4 /dev/vg0/home
+<br>Tips
+The ext4 filesystem is a common choice for Linux systems as it provides a good balance of performance, features, and reliability. Running these commands effectively initializes each logical volume with a fresh filesystem, destroying any existing data on them and creating the necessary structures (like inodes, journal, and superblocks) for the operating system to store and retrieve files. After formatting, these filesystems are ready to be mounted and used for their respective purposes in your Arch Linux system.
 <br><br>mkswap /dev/vg0/swap
 <br>Initial Setup, Encryption and Format Done!<br><br><br>mount /dev/vg0/root /mnt
+<br>Info
+This step is crucial because it makes the newly created filesystem available for operations like extracting the base system, chrooting into it for configuration, and installing packages. The root filesystem is mounted first since it will contain the directory structure where other filesystems will be mounted.
 <br><br>mkdir -p /mnt/{boot,home,var,usr,data}
 <br><br>mount /dev/vda1 /mnt/boot
+<br>Info
+This step is essential because the boot partition needs to be accessible to install and configure the bootloader (like GRUB or systemd-boot), which will allow your system to boot properly after installation is complete. Without this mount, your bootloader wouldn't be able to find the necessary boot files when your system starts.
 <br><br>mount /dev/vg0/home /mnt/home
 mount /dev/vg0/var /mnt/var
 mount /dev/vg0/usr /mnt/usr
@@ -129,8 +156,8 @@ You can check if it there by typing: cat /etc/locale.conf it sould return: LANG=
 #Use the disk you have you boot onto, not the partition, just the disk
 <br>Info
 Now if you wan to check, you should: ls /boot<br>
-it should return EFI grub ...
-<br><br>For that we will need the UUID of the encrypted partition (vda2) and the non encrypted one (cryptlvm) to be inside the /etc/default/grub config file<br>blkid -o value -s UUID /dev/vda2 &gt;&gt; /etc/default/grub
+it should return EFI, grub, ...
+<br><br>For that we will need the UUID of the encrypted partition (vda2) and the path to the non encrypted one (cryptlvm) to be inside the /etc/default/grub config file<br>blkid -o value -s UUID /dev/vda2 &gt;&gt; /etc/default/grub
 <br>Tips
 What's an UUID?<br>
 A UUID (Universally Unique Identifier), also known as a GUID (Globally Unique Identifier), is a 128-bit number used to uniquely identify information in computer systems. A standard UUID appears as a 36-character string (including hyphens "-") with this format:<br>
@@ -303,7 +330,7 @@ AllowTcpForwarding no
 <br><br>Accessing your server usually involves using a password with SSH. But a more secure method is&nbsp;SSH key authentication.<br>This uses two keys: a public key on your server and a private key you keep. You get access when the server verifies you have the private key.<br>This method is safer than just using a password, as it ensures only someone with the private key can enter the server.<br>Find the&nbsp;PasswordAuthentication variable and set its value to&nbsp;no&nbsp;like this:<br>PasswordAuthentication no
 <br>By doing this, you ensure that the server can only be accessed using SSH keys.<br>Always remember to keep your private key secure.<br><br>After you've made your changes, be sure to reload the SSH service to apply them.<br>Before that, you should verify the configuration for errors. You can do this using the following command:<br>sudo sshd -t
 <br>Use this command to restart SSH:<br>sudo systemctl restart sshd
-<br>Once the service is reloaded, your changes will be in effect.<br>You can also use the&nbsp;sudo sshd -T&nbsp;command to list all variables with their values, allowing you to check whether the changes have taken effect or not.<br>2FA Configuration Done!<br><br><br>Prevent source routing of incoming packets and log malformed IP's.<br><br>Create and edit /etc/sysctl.conf :<br>sudo vim /etc/sysctl.d/90-network-security.conf
+<br>Once the service is reloaded, your changes will be in effect.<br>You can also use the&nbsp;sudo sshd -T&nbsp;command to list all variables with their values, allowing you to check whether the changes have taken effect or not.<br>2FA Configuration Done!<br><br><br>Let me explain the fundamental reasons why we're implementing these security configurations:<br><br>Create and edit /etc/sysctl.conf :<br>sudo vim /etc/sysctl.d/90-network-security.conf
 <br>Add the following lines :<br># Reverse Path Filtering (Prevent Spoofing Attacks)
 net.ipv4.conf.all.rp_filter = 1
 net.ipv4.conf.default.rp_filter = 1
@@ -447,13 +474,12 @@ However, the original file for changing kernel parameters is&nbsp;/etc/sysctl.co
 While UFW uses its own version for this purpose, we prefer not to do that. When we&nbsp;harden the <a data-href="#Harden network with sysctl settings" href="about:blank#Harden_network_with_sysctl_settings" class="internal-link" target="_self" rel="noopener nofollow">Harden network with sysctl settings</a> we make our changes to kernel parameters directly in the&nbsp;/etc/sysctl.conf&nbsp;file.<br>
 That's why we need to change that line, if you did not harder the kernel, do not change it.<br>
 This way, I avoid dealing with two files and can maintain a clearer overview of the changes in a single file.
-<br>To incorporate the default changes that UFW makes, I can simply add these to the end of the&nbsp;/etc/sysctl.conf&nbsp;file:<br>net.ipv4.conf.all.accept_redirects = 0
-net.ipv4.conf.default.accept_redirects = 0
-net.ipv6.conf.all.accept_redirects = 0
-net.ipv6.conf.default.accept_redirects = 0
+<br>To incorporate the default changes that UFW makes, you can simply add these to the end of the&nbsp;/etc/sysctl.d/90-network-security.conf&nbsp;file:<br>#In the ICMP redirects section:
 net.ipv4.icmp_echo_ignore_broadcasts = 1
 net.ipv4.icmp_ignore_bogus_error_responses = 1
 net.ipv4.icmp_echo_ignore_all = 0
+
+#Add log_martians section:
 net.ipv4.conf.all.log_martians = 0
 net.ipv4.conf.default.log_martians = 0
 <br>Now, simply reboot the server for the changes to take effect. There’s no need to enable UFW for the changes to apply, since we are using the original&nbsp;sysctl.conf&nbsp;file.<br>The last file we need to review is the&nbsp;/etc/ufw/ufw.conf&nbsp;file, which contains just two variables:<br>ENABLED=no
@@ -551,7 +577,7 @@ UFW&nbsp;blocks these invalid packets by default, but there are still instances 
 <br>Now, reload UFW if it is already enabled:<br>sudo ufw reload
 <br>These additional rules further enhance the firewall’s ability to filter out potentially malicious packets and protect your server from unwanted connection attempts.<br>Firewall Using UFW Done!<br><br>Warning
 
-But you can do it to the web server too.
+But you can do it to the web server too to enhance the security.
 <br><br>Fail2ban is available in Arch-Linux repositories.<br>To install it, use this command:<br>sudo pacman -S fail2ban
 <br><br>Fail2ban's configuration files are located in the&nbsp;/etc/fail2ban/&nbsp;directory.<br>If you list the contents of this directory, you will find two important configuration files:&nbsp;<br>
 <br>The&nbsp;fail2ban.conf&nbsp;file contains Fail2Ban's global settings, which I don't recommend modifying.
@@ -570,7 +596,8 @@ sender
 <br>action_mw&nbsp;sends an email when taking action
 <br>action_mwl&nbsp;sends an email and includes logging
 <br>action_cf_mwl&nbsp;does all of the above, plus sends an update to the Cloudflare API associated with your account to ban the attacker there as well
-<br>Pick the one that suits you the most.<br><br>Now, it is time to examine the service-specific sections, also known as individual jails, such as the&nbsp;[sshd]&nbsp;jail, which protects our server from unauthorized access attempts.<br>Each of these jails needs to be individually enabled by adding an&nbsp;enabled = true&nbsp;line under the header, along with their other settings.<br>By default, only the&nbsp;[sshd]&nbsp;jail is enabled, and all others are disabled.<br>Scroll down the&nbsp;jail.conf&nbsp;file until you find the&nbsp;[sshd]&nbsp;jail, which should look similar to this:<br>port    = ssh
+<br>Pick the one that suits you the most.<br><br>Now, it is time to examine the service-specific sections, also known as individual jails, such as the&nbsp;[sshd]&nbsp;jail, which protects our server from unauthorized access attempts.<br>Each of these jails needs to be individually enabled by adding an&nbsp;enabled = true&nbsp;line under the header, along with their other settings.<br>By default, only the&nbsp;[sshd]&nbsp;jail is enabled, and all others are disabled.<br>Scroll down the&nbsp;jail.conf&nbsp;file until you find the&nbsp;[sshd]&nbsp;jail, which should look similar to this:<br>enabled = true
+port    = ssh
 logpath = %(sshd_log)s
 backend = %(sshd_backend)s
 <br>If you've changed the SSH port, ensure to update the value of the&nbsp;port&nbsp;variable accordingly.<br>You can include variables defined in the&nbsp;[DEFAULT]&nbsp;section, such as the&nbsp;bantime,&nbsp;maxretry, and&nbsp;findtime&nbsp;variables, which will only apply to this jail.<br>If you scroll down further, you'll find other jails that are disabled, such as the&nbsp;[nginx-http-auth]&nbsp;or&nbsp;[apache-auth] jails.<br><br>Since the&nbsp;[sshd]&nbsp;jail, which protects SSH, is enabled, we can proceed to start and enable the fail2ban&nbsp;service if it is disabled, depending on the version of Ubuntu you are using.<br>Use the following commands to start and enable Fail2ban:<br>sudo systemctl start fail2ban
@@ -589,10 +616,7 @@ sudo systemctl enable fail2ban
    |- Currently banned:	1
    |- Total banned:	2
    `- Banned IP list:	218.92.0.29
-<br>If you have disabled password authentication for SSH, you may notice zero failed attempts.<br>Caution
-For Ubuntu-Server 22.4 you need to download r6log to make Fail2Ban work!<br>
-Then you need to add "authpriv.*           /var/log/auth.log" in the /etc/rsyslog.conf
-<br>Fail2Ban Configuration Done!<br><br>Warning
+<br>If you have disabled password authentication for SSH, you may notice zero failed attempts.<br>Fail2Ban Configuration Done!<br><br>Warning
 
 <br><br>Warning
 You need to be onto the archlinux iso to do it, not on your arch-chroot
@@ -640,6 +664,47 @@ if ! mountpoint -q /data/http; then
         sudo /usr/local/bin/mount-httpdata.sh
     fi
 fi
+<br><br><br>sudo pacman -Syu &amp;&amp; sudo pacman -S nginx
+<br><br>sudo vim /etc/usr/share/nginx/html/maintenance.html
+<br>Add a simple maintenance page:<br>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;title&gt;Maintenance&lt;/title&gt;
+    &lt;style&gt;
+        body { font-family: Arial, sans-serif; text-align: center; padding: 40px; background-color: #585a59; color: #FFF }
+        h1 { color: #FFF; }
+        .container { max-width: 600px; margin: 0 auto; }
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;div class="container"&gt;
+        &lt;h1&gt;Site Under Maintenance&lt;/h1&gt;
+        &lt;p&gt;The website is currently undergoing maintenance. Please check back later.&lt;/p&gt;
+    &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+<br><br>sudo vim /etc/nginx/nginx.conf  # or the appropriate site configuration
+<br>Add this logic to your server block:<br>server {
+    listen 80;
+    server_name www.manual-arch-install.local;
+    
+    root /data/http/encrypted-arch-linux;
+	index encrypted-arch-linux.html;
+	
+    #Maintenance page logic
+    error_page 403 404 /maintenance.html;
+	location = /maintenance.html {
+		root /usr/share/nginx/html;
+		internal;
+	}
+    
+    access_log  /var/log/nginx/access.log;
+    error_log   /var/log/nginx/error.log warn;
+}
+<br><br>sudo pacman -Syu &amp;&amp; sudo pacman -S git
+<br>Then we will download our main website file on git:<br>git clone https://github.com/Asashi-Git/encrypted-arch-linux.git
+sudo mv encrypted-arch-linux /data/http/
+<br><br>sudo systemctl enable nginx --now
 <br>GG
-You can reboot your system and have fun ! GG, now you have an hardened arch linux, with manual install and an http partition that is automatically mounted when the local administrator logged in. This is an advanced configuration, if your setup work, you can be proud of you !
-<br>]]></description><link>arch-linux-manual-install-and-hardening.html</link><guid isPermaLink="false">ARCH LINUX - Manual Install and Hardening.md</guid><dc:creator><![CDATA[Samuel Decarnelle]]></dc:creator><pubDate>Fri, 02 May 2025 09:24:17 GMT</pubDate></item></channel></rss>
+You can reboot your system and have fun ! GG, now you have an hardened arch linux web-server, with manual install and an http partition that is automatically mounted when the local administrator logged in. This is an advanced configuration, if your setup work, you can be proud of you !
+<br>]]></description><link>arch-linux-manual-install-and-hardening.html</link><guid isPermaLink="false">ARCH LINUX - Manual Install and Hardening.md</guid><dc:creator><![CDATA[Samuel Decarnelle]]></dc:creator><pubDate>Sat, 03 May 2025 00:17:17 GMT</pubDate></item></channel></rss>
