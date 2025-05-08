@@ -1,20 +1,16 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Obsidian Vault]]></title><description><![CDATA[Obsidian digital garden]]></description><link>http://github.com/dylang/node-rss</link><image><url>lib/media/favicon.png</url><title>Obsidian Vault</title><link></link></image><generator>Webpage HTML Export plugin for Obsidian</generator><lastBuildDate>Sat, 03 May 2025 00:31:11 GMT</lastBuildDate><atom:link href="lib/rss.xml" rel="self" type="application/rss+xml"/><pubDate>Sat, 03 May 2025 00:31:07 GMT</pubDate><copyright><![CDATA[Samuel Decarnelle]]></copyright><ttl>60</ttl><dc:creator>Samuel Decarnelle</dc:creator><item><title><![CDATA[ARCH LINUX - Manual Install and Hardening]]></title><description><![CDATA[ 
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Obsidian Vault]]></title><description><![CDATA[Obsidian digital garden]]></description><link>http://github.com/dylang/node-rss</link><image><url>lib/media/favicon.png</url><title>Obsidian Vault</title><link></link></image><generator>Webpage HTML Export plugin for Obsidian</generator><lastBuildDate>Thu, 08 May 2025 22:37:36 GMT</lastBuildDate><atom:link href="lib/rss.xml" rel="self" type="application/rss+xml"/><pubDate>Thu, 08 May 2025 22:37:32 GMT</pubDate><copyright><![CDATA[Samuel Decarnelle]]></copyright><ttl>60</ttl><dc:creator>Samuel Decarnelle</dc:creator><item><title><![CDATA[ARCH LINUX - Manual Install and Hardening]]></title><description><![CDATA[ 
  <br><br><br>
-<br>
-Arch-Linux installation media (ISO file)
-
-<br>
-Machine with :
+<br>Arch-Linux installation media (ISO file)
+<br>Machine with :
 
 <br>8GB RAM
 <br>110GB storage
 <br>Network connectivity
 
 
-
-<br><br><br>Boot Media
+<br>For this documentation, my disk name is "vda", change "vda" by your disk name.<br><br><br><br>Boot Media
 Start your Arch-Linux iso mounted in EFI
-<br>Change your keyboard layout if needed:<br>loadkey fr
+<br>Change your keyboard layout if needed:<br>loadkeys fr
 <br><br>Critical with Encryption
 The encryption passphrase cannot be recovered if lost. Document it securely but separately from the system.
 <br><br>lsblk
@@ -279,6 +275,10 @@ Choose a port number between 1024 and 65535 that isn't used by other services.
 <br>Basic SSH Config Done!<br><br><br>On your server machine (not the client) generate an RSA key pair :<br>ssh-keygen -t rsa -b 4096
 <br>Then, add the public key to authorized_keys :<br>cat ~/.ssh/id_rsa.pub &gt;&gt; ~/.ssh/authorized_keys
 <br><br>Copy your private key to the client :<br>Windows (with PowerShell):<br>scp -P &lt;port&gt; &lt;username&gt;@&lt;server-ip&gt;:~/.ssh/id_rsa ./.ssh
+# Or you can, on your server :
+python3 -m http.server #Then go to your browser IP-Of-your-Server:8000
+# In linux put the right right to the key in your client
+chmod 600 ~/.ssh/id_rsa
 <br><br>In /etc/ssh/sshd_config, find and uncheck :<br>AuthorizedKeysFile .ssh/authorized_keys
 <br><br>Restart the SSH service to apply all changes :<br>sudo systemctl restart sshd
 <br>Important :
@@ -309,10 +309,10 @@ Do not close your current SSH session until you’ve verified the new configurat
 KbdInteractiveAuthentication yes
 UsePAM yes
 ChallengeResponseAuthentication yes
-AuthenticationMethods publickey,skeyboard-interactive
+AuthenticationMethods publickey,keyboard-interactive
 <br>Comment all the code inside:<br>sudo nvim /etc/ssh/sshd_config.d/99-archlinux.conf
 #comment all the code
-<br><br>Restart the SSH service to apply all changes :<br>sudo systemctl restart ssh
+<br><br>Restart the SSH service to apply all changes :<br>sudo systemctl restart sshd
 <br>Important :
 Do not close your current SSH session until you’ve verified the new configuration works.
 <br><br>LoginGraceTime determines the authentication window for users. <br>MaxAuthTries controls how many authentication attempts are permitted before blocking a connection.<br>MaxSessions defines how many simultaneous SSH connections a single user can maintain. <br>These are the recommended values for these three variables:<br>LoginGraceTime 20
@@ -330,7 +330,7 @@ AllowTcpForwarding no
 <br><br>Accessing your server usually involves using a password with SSH. But a more secure method is&nbsp;SSH key authentication.<br>This uses two keys: a public key on your server and a private key you keep. You get access when the server verifies you have the private key.<br>This method is safer than just using a password, as it ensures only someone with the private key can enter the server.<br>Find the&nbsp;PasswordAuthentication variable and set its value to&nbsp;no&nbsp;like this:<br>PasswordAuthentication no
 <br>By doing this, you ensure that the server can only be accessed using SSH keys.<br>Always remember to keep your private key secure.<br><br>After you've made your changes, be sure to reload the SSH service to apply them.<br>Before that, you should verify the configuration for errors. You can do this using the following command:<br>sudo sshd -t
 <br>Use this command to restart SSH:<br>sudo systemctl restart sshd
-<br>Once the service is reloaded, your changes will be in effect.<br>You can also use the&nbsp;sudo sshd -T&nbsp;command to list all variables with their values, allowing you to check whether the changes have taken effect or not.<br>2FA Configuration Done!<br><br><br>Let me explain the fundamental reasons why we're implementing these security configurations:<br><br>Create and edit /etc/sysctl.conf :<br>sudo vim /etc/sysctl.d/90-network-security.conf
+<br>Once the service is reloaded, your changes will be in effect.<br>You can also use the&nbsp;sudo sshd -T&nbsp;command to list all variables with their values, allowing you to check whether the changes have taken effect or not.<br>2FA Configuration Done!<br><br><br>Let me explain the fundamental reasons why we're implementing these security configurations:<br><br>Create and edit `/etc/90-network-security.conf :<br>sudo vim /etc/sysctl.d/90-network-security.conf
 <br>Add the following lines :<br># Reverse Path Filtering (Prevent Spoofing Attacks)
 net.ipv4.conf.all.rp_filter = 1
 net.ipv4.conf.default.rp_filter = 1
@@ -432,8 +432,12 @@ Without these safeguards:
 
 <br>Security Note :
 Real-world consequence: A compromised user account could be leveraged to read sensitive system files or extract credentials from memory that would otherwise be inaccessible.
-<br><br>Reload sysctl :<br>sudo sysctl -p
-<br>In cybersecurity, the goal isn't just to keep attackers out initially, but to make each step of an attack more difficult, more likely to be detected, and less likely to succeed. These sysctl configurations are a key part of that strategy.<br><br>To verify that all settings have been applied:<br># Check all configured parameters
+<br><br>Reload sysctl :<br>sudo ln -s /etc/sysctl.d/90-network-security.conf /etc/sysctl.conf
+sudo sysctl --system
+<br>In cybersecurity, the goal isn't just to keep attackers out initially, but to make each step of an attack more difficult, more likely to be detected, and less likely to succeed. These sysctl configurations are a key part of that strategy.<br><br>To verify that all settings have been applied:<br># Check if the service is enabled
+systemctl status systemd-sysctl
+
+# Check all configured parameters
 sudo sysctl --system
 
 # Or check specific categories
@@ -442,7 +446,7 @@ sysctl -a | grep "net.ipv4.conf.all.rp_filter"
 sysctl -a | grep "net.ipv4.conf"
 sysctl -a | grep "kernel"
 sysctl -a | grep "fs.protected"
-<br>Kernel Hardening Done!<br><br><br>Setting up a firewall is essential for securing your server, and UFW makes this process straightforward and user-friendly.<br><br>On Debian-based distribution, like Ubuntu, UFW often comes pre-packaged, but you can check and install it using theses commands:<br># To check if UFW is installed
+<br>Kernel Hardening Done!<br><br><br>Setting up a firewall is essential for securing your server, and UFW makes this process straightforward and user-friendly.<br><br>On Debian-based distribution, like Ubuntu, UFW often comes pre-packaged, but since we are using Arch-Linux you can check and install it using theses commands:<br># To check if UFW is installed
 sudo ufw status
 
 # If it's already installed disable it
@@ -471,7 +475,7 @@ IPT_SYSCTL=/etc/sysctl.conf
 The only change we make in this file is to the&nbsp;IPT_SYSCTL&nbsp;variable. There’s another file we’ll discuss next, which is&nbsp;/etc/ufw/sysctl.conf.  UFW uses this file to tweak certain kernel parameters.<br>
 However, the original file for changing kernel parameters is&nbsp;/etc/sysctl.conf.
 <br>Why this option? :
-While UFW uses its own version for this purpose, we prefer not to do that. When we&nbsp;harden the <a data-href="#Harden network with sysctl settings" href="about:blank#Harden_network_with_sysctl_settings" class="internal-link" target="_self" rel="noopener nofollow">Harden network with sysctl settings</a> we make our changes to kernel parameters directly in the&nbsp;/etc/sysctl.conf&nbsp;file.<br>
+While UFW uses its own version for this purpose, we prefer not to do that. When we&nbsp;harden the Harden network with sysctl settings we make our changes to kernel parameters directly in the&nbsp;/etc/sysctl.conf&nbsp;file.<br>
 That's why we need to change that line, if you did not harder the kernel, do not change it.<br>
 This way, I avoid dealing with two files and can maintain a clearer overview of the changes in a single file.
 <br>To incorporate the default changes that UFW makes, you can simply add these to the end of the&nbsp;/etc/sysctl.d/90-network-security.conf&nbsp;file:<br>#In the ICMP redirects section:
@@ -575,6 +579,7 @@ UFW&nbsp;blocks these invalid packets by default, but there are still instances 
 -The first rule drops any packet that’s considered&nbsp;INVALID&nbsp;by the&nbsp;conntrack&nbsp;module.<br>
 -The second rule blocks TCP packets that are flagged as&nbsp;NEW&nbsp;(indicating new connection attempts) but don’t have the SYN flag set&nbsp;alone.
 <br>Now, reload UFW if it is already enabled:<br>sudo ufw reload
+sudo systemctl enable ufw --now
 <br>These additional rules further enhance the firewall’s ability to filter out potentially malicious packets and protect your server from unwanted connection attempts.<br>Firewall Using UFW Done!<br><br>Warning
 
 But you can do it to the web server too to enhance the security.
@@ -616,20 +621,14 @@ sudo systemctl enable fail2ban
    |- Currently banned:	1
    |- Total banned:	2
    `- Banned IP list:	218.92.0.29
-<br>If you have disabled password authentication for SSH, you may notice zero failed attempts.<br>Fail2Ban Configuration Done!<br><br>Warning
-
-<br><br>Warning
-You need to be onto the archlinux iso to do it, not on your arch-chroot
-<br><br>lvcreate -L 5G vg0 -n httpdata  # Create a new logical volume
+<br>If you have disabled password authentication for SSH, you may notice zero failed attempts.<br>Fail2Ban Configuration Done!<br><br><br><br>lvcreate -L 5G vg0 -n httpdata  # Create a new logical volume
 <br><br>cryptsetup luksFormat /dev/vg0/httpdata  # Encrypt it separately
-<br><br>cryptsetup open /dev/vg2/httpdata crypthttp
+<br><br>cryptsetup open /dev/vg0/httpdata crypthttp
 <br><br>mkfs.ext4 /dev/mapper/crypthttp
 mkdir -p /mnt/data/http
 <br><br>mount /dev/mapper/crypthttp /mnt/data/http
-<br><br>umount -a
-reboot
-<br><br>Then we need to do a script to decrypt the http partition, and a script to lunch the decrypt partition when the user localadm login.<br><br>nvim /usr/local/bin/mount-httpdata.sh
-<br>ADD THIS CONTENT:<br>#!/bin/bash
+<br>Then we need to do a script to decrypt the http partition, and a script to lunch the decrypt partition when the user localadm login.<br><br>nvim /usr/local/bin/mount-httpdata.sh
+<br>Add this content:<br>#!/bin/bash
 
 # Check if already mounted
 if mountpoint -q /data/http; then
@@ -656,7 +655,7 @@ else
 fi
 <br><br>chmod +x /usr/local/bin/mount-httpdata.sh
 <br>Now that the script to decrypt and mount the http partition is done, we need to make a script to exec it on localadm login.<br>nvim /home/localadm/.bash_profile
-<br>ADD THIS CONTENT TO THE END OF THE FILE:<br># Check if HTTP partition is mounted
+<br>Add this content to the end of the file:<br># Check if HTTP partition is mounted
 if ! mountpoint -q /data/http; then
     echo "HTTP data partition is not mounted."
     read -p "Would you like to mount it now? (y/n): " response
@@ -665,41 +664,135 @@ if ! mountpoint -q /data/http; then
     fi
 fi
 <br><br><br>sudo pacman -Syu &amp;&amp; sudo pacman -S nginx
-<br><br>sudo vim /etc/usr/share/nginx/html/maintenance.html
-<br>Add a simple maintenance page:<br>&lt;!DOCTYPE html&gt;
-&lt;html&gt;
-&lt;head&gt;
-    &lt;title&gt;Maintenance&lt;/title&gt;
-    &lt;style&gt;
-        body { font-family: Arial, sans-serif; text-align: center; padding: 40px; background-color: #585a59; color: #FFF }
-        h1 { color: #FFF; }
-        .container { max-width: 600px; margin: 0 auto; }
-    &lt;/style&gt;
-&lt;/head&gt;
-&lt;body&gt;
-    &lt;div class="container"&gt;
-        &lt;h1&gt;Site Under Maintenance&lt;/h1&gt;
-        &lt;p&gt;The website is currently undergoing maintenance. Please check back later.&lt;/p&gt;
-    &lt;/div&gt;
-&lt;/body&gt;
-&lt;/html&gt;
-<br><br>sudo vim /etc/nginx/nginx.conf  # or the appropriate site configuration
-<br>Add this logic to your server block:<br>server {
-    listen 80;
-    server_name www.manual-arch-install.local;
-    
-    root /data/http/encrypted-arch-linux;
+<br><br>curl -o maintenance.html https://raw.githubusercontent.com/Asashi-Git/scripts/main/maintenance.html
+<br><br>sudo mv maintenance.html /usr/share/nginx/html
+<br><br>sudo vim /etc/nginx/nginx.conf
+<br>Replace the inside of the file with this content:<br>
+#user http;
+worker_processes  1;
+
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+#pid        logs/nginx.pid;
+
+
+# Load all installed modules
+include modules.d/*.conf;
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '$status $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
+
+    #access_log  logs/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    server {
+        listen       80;
+        server_name  localhost;
+
+        #charset koi8-r;
+
+        #access_log  logs/host.access.log  main;
+	root /data/http/encrypted-arch-linux;
 	index encrypted-arch-linux.html;
-	
-    #Maintenance page logic
-    error_page 403 404 /maintenance.html;
-	location = /maintenance.html {
-		root /usr/share/nginx/html;
-		internal;
-	}
-    
-    access_log  /var/log/nginx/access.log;
-    error_log   /var/log/nginx/error.log warn;
+
+	#location / {
+	#    root   /usr/share/nginx/html;
+	#    index  index.html index.htm;
+	#}
+
+
+        #error_page  404              /404.html;
+
+        # redirect server error pages to the static page /50x.html
+        #
+        error_page 403 404 /maintenance.html;
+        location = /maintenance.html {
+            root   /usr/share/nginx/html;
+	   internal;
+        }
+
+	access_log /var/log/nginx/access.log;
+	error_log /var/log/nginx/error.log warn;
+
+        # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+        #
+        #location ~ \.php$ {
+        #    proxy_pass   http://127.0.0.1;
+        #}
+
+        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+        #
+        #location ~ \.php$ {
+        #    root           html;
+        #    fastcgi_pass   127.0.0.1:9000;
+        #    fastcgi_index  index.php;
+        #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        #    include        fastcgi_params;
+        #}
+
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
+    }
+
+
+    # another virtual host using mix of IP-, name-, and port-based configuration
+    #
+    #server {
+    #    listen       8000;
+    #    listen       somename:8080;
+    #    server_name  somename  alias  another.alias;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
+
+    # HTTPS server
+    #
+    #server {
+    #    listen       443 ssl;
+    #    server_name  localhost;
+
+    #    ssl_certificate      cert.pem;
+    #    ssl_certificate_key  cert.key;
+
+    #    ssl_session_cache    shared:SSL:1m;
+    #    ssl_session_timeout  5m;
+
+    #    ssl_ciphers  HIGH:!aNULL:!MD5;
+    #    ssl_prefer_server_ciphers  on;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
 }
 <br><br>sudo pacman -Syu &amp;&amp; sudo pacman -S git
 <br>Then we will download our main website file on git:<br>git clone https://github.com/Asashi-Git/encrypted-arch-linux.git
@@ -707,4 +800,4 @@ sudo mv encrypted-arch-linux /data/http/
 <br><br>sudo systemctl enable nginx --now
 <br>GG
 You can reboot your system and have fun ! GG, now you have an hardened arch linux web-server, with manual install and an http partition that is automatically mounted when the local administrator logged in. This is an advanced configuration, if your setup work, you can be proud of you !
-<br>]]></description><link>arch-linux-manual-install-and-hardening.html</link><guid isPermaLink="false">ARCH LINUX - Manual Install and Hardening.md</guid><dc:creator><![CDATA[Samuel Decarnelle]]></dc:creator><pubDate>Sat, 03 May 2025 00:17:17 GMT</pubDate></item></channel></rss>
+<br>]]></description><link>arch-linux-manual-install-and-hardening.html</link><guid isPermaLink="false">ARCH LINUX - Manual Install and Hardening.md</guid><dc:creator><![CDATA[Samuel Decarnelle]]></dc:creator><pubDate>Thu, 08 May 2025 22:35:51 GMT</pubDate></item></channel></rss>
